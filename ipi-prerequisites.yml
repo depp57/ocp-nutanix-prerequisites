@@ -81,8 +81,25 @@
                 state: absent
                 vm_uuid: "{{created_vm.vm_uuid}}"
 
-#        - name: "Ensure that the account can perform CRUD operations on categories in the cluster {{ nutanix_element_host }}"
-#
+        - name: "Ensure that the account can perform CRUD operations on categories in the cluster {{ nutanix_element_host }}"
+          block:
+            - name: "Ensure that the account can create a category in the cluster {{ nutanix_cluster }}"
+              ntnx_categories:
+                state: present
+                name: tmp_ansible_check_ipi_prerequisites
+                desc: Temporary category created by a Ansible playbook to check if OCP IPI installation prerequisites are fulfilled
+
+            - name: "Ensure that the account can update its categories in the cluster {{ nutanix_cluster }}"
+              ntnx_categories:
+                name: tmp_ansible_check_ipi_prerequisites
+                values:
+                  - "temp-val"
+
+            - name: "Ensure that the account can delete its categories in the cluster {{ nutanix_cluster }}"
+              ntnx_categories:
+                state: absent
+                name: tmp_ansible_check_ipi_prerequisites
+
 #        - name: "Ensure that the account can perform CRUD operations on images in the cluster {{ nutanix_element_host }}"
 
 
