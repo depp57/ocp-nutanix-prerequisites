@@ -42,7 +42,49 @@
         url: "https://{{ nutanix_central_host }}:9440"
         validate_certs: true
 
-#    - name: Ensure user has enough privileges TODO
+    # As for now (summer 2023), https://github.com/nutanix/nutanix.ansible doesn't allow accessing user's permissions
+    # Furthermore, the Prism Central v3 API doesn't allow too, or at least not easily
+    # That is, to ensure the provided account has enough permissions, this task runs CRUD operations on mock VMs, categories and images
+    # The OCP IPI installation needs to perform these actions
+    # TODO find a better solution
+    - name: Ensure account has enough permissions
+      block:
+        - name: "Ensure that the account can perform CRUD operations on VMs in the cluster {{ nutanix_cluster }}"
+          block:
+            - name: Ensure that the account can create a VM in the cluster
+              ntnx_vms:
+                state: present
+                name: tmp_ansible_check_ipi_prerequisites
+                desc: Temporary VM created by a Ansible playbook to check if OCP IPI installation prerequisites are fulfilled
+                cluster:
+                  name: "{{ nutanix_cluster }}"
+                vcpus: 1
+                cores_per_vcpu: 1
+                memory_gb: 1
+              register: created_vm
+
+            - name: Ensure that the account can list its VM in the cluster
+              ntnx_vms_info:
+                filter:
+                  vm_name: tmp_ansible_check_ipi_prerequisites
+                kind: vm
+              register: vm_info
+              failed_when: vm_info.response.metadata.total_matches != 1
+
+            - name: Ensure that the account can update its VM in the cluster
+              ntnx_vms:
+                vm_uuid: "{{created_vm.vm_uuid}}"
+                memory_gb: 2
+
+            - name: Ensure that the account can delete its VM in the cluster
+              ntnx_vms:
+                state: absent
+                vm_uuid: "{{created_vm.vm_uuid}}"
+
+#        - name: "Ensure that the account can perform CRUD operations on categories in the cluster {{ nutanix_element_host }}"
+#
+#        - name: "Ensure that the account can perform CRUD operations on images in the cluster {{ nutanix_element_host }}"
+
 
 #    - name: Ensure cluster AOS version is compatible
 #
