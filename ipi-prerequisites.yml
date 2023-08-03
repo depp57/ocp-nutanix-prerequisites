@@ -8,13 +8,13 @@
     - secret.yml
   module_defaults:
     group/nutanix.ncp.ntnx:
-      nutanix_host: "{{ nutanix_host }}"
+      nutanix_host: "{{ nutanix_central_host }}"
       nutanix_username: "{{ nutanix_username }}"
       nutanix_password: "{{ nutanix_password }}"
       validate_certs: true
 
   tasks:
-    - name: Ensure that the ccoctl utility is correctly installed
+    - name: Ensure ccoctl is correctly installed in the host machine
       block:
         - name: Checking if ccoctl utility is installed
           stat:
@@ -26,8 +26,17 @@
                   https://docs.openshift.com/container-platform/4.13/installing/installing_nutanix/preparing-to-install-on-nutanix.html#cco-ccoctl-configuring_preparing-to-install-on-nutanix"
           when: not (ccoctl_check.stat.exists and ccoctl_check.stat.executable)
     
-#    - name: Ensure port 9440 of Prism Central is open
-#
+    - name: Ensure port 9440 of Prism Central and Prism Element are open
+      wait_for:
+        host: "{{ item }}"
+        port: 9440
+        state: started
+        delay: 0
+        timeout: 3
+      loop:
+        - "{{ nutanix_central_host }}"
+        - "{{ nutanix_element_host }}"
+
 #    - name: Ensure port 9440 of Pris Element is open
 #    
 #    - name: Ensure SSL certificate is valide
