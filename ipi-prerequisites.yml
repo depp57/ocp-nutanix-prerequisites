@@ -51,7 +51,7 @@
       block:
         - name: "Ensure that the account can perform CRUD operations on VMs in the cluster {{ nutanix_cluster }}"
           block:
-            - name: Ensure that the account can create a VM in the cluster
+            - name: "Ensure that the account can create a VM in the cluster {{ nutanix_cluster }}"
               ntnx_vms:
                 state: present
                 name: tmp_ansible_check_ipi_prerequisites
@@ -63,7 +63,7 @@
                 memory_gb: 1
               register: created_vm
 
-            - name: Ensure that the account can list its VM in the cluster
+            - name: "Ensure that the account can list its VM in the cluster {{ nutanix_cluster }}"
               ntnx_vms_info:
                 filter:
                   vm_name: tmp_ansible_check_ipi_prerequisites
@@ -71,12 +71,12 @@
               register: vm_info
               failed_when: vm_info.response.metadata.total_matches != 1
 
-            - name: Ensure that the account can update its VM in the cluster
+            - name: "Ensure that the account can update its VM in the cluster {{ nutanix_cluster }}"
               ntnx_vms:
                 vm_uuid: "{{created_vm.vm_uuid}}"
                 memory_gb: 2
 
-            - name: Ensure that the account can delete its VM in the cluster
+            - name: "Ensure that the account can delete its VM in the cluster {{ nutanix_cluster }}"
               ntnx_vms:
                 state: absent
                 vm_uuid: "{{created_vm.vm_uuid}}"
