@@ -25,7 +25,7 @@
             msg: "ccoctl utility does not exist or is not executable. Please install and configure it appropriately.
                   https://docs.openshift.com/container-platform/4.13/installing/installing_nutanix/preparing-to-install-on-nutanix.html#cco-ccoctl-configuring_preparing-to-install-on-nutanix"
           when: not (ccoctl_check.stat.exists and ccoctl_check.stat.executable)
-    
+
     - name: Ensure port 9440 of Prism Central and Prism Element are open
       wait_for:
         host: "{{ item }}"
@@ -37,10 +37,13 @@
         - "{{ nutanix_central_host }}"
         - "{{ nutanix_element_host }}"
 
-#    - name: Ensure port 9440 of Pris Element is open
-#    
-#    - name: Ensure SSL certificate is valide
-#    
+    - name: Ensure SSL certificate is valid
+      uri:
+        url: "https://{{ nutanix_central_host }}:9440"
+        validate_certs: true
+
+#    - name: Ensure user has enough privileges TODO
+
 #    - name: Ensure cluster AOS version is compatible
 #
 #    - name: Ensure Prism Central version is compatible
