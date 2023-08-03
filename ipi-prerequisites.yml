@@ -1,0 +1,41 @@
+---
+- name: Check prerequisites for an OCP IPI installation on Nutanix
+  hosts: localhost
+  gather_facts: false
+  collections:
+    - nutanix.ncp
+  vars_files:
+    - secret.yml
+  module_defaults:
+    group/nutanix.ncp.ntnx:
+      nutanix_host: "{{ nutanix_host }}"
+      nutanix_username: "{{ nutanix_username }}"
+      nutanix_password: "{{ nutanix_password }}"
+      validate_certs: true
+
+  tasks:
+    - name: Ensure that the ccoctl utility is correctly installed
+      block:
+        - name: Checking if ccoctl utility is installed
+          stat:
+            path: "/usr/bin/ccoctl"
+          register: ccoctl_check
+        - name: Print informative message if ccoctl utility is not found or not executable
+          fail:
+            msg: "ccoctl utility does not exist or is not executable. Please install and configure it appropriately.
+                  https://docs.openshift.com/container-platform/4.13/installing/installing_nutanix/preparing-to-install-on-nutanix.html#cco-ccoctl-configuring_preparing-to-install-on-nutanix"
+          when: not (ccoctl_check.stat.exists and ccoctl_check.stat.executable)
+    
+#    - name: Ensure port 9440 of Prism Central is open
+#
+#    - name: Ensure port 9440 of Pris Element is open
+#    
+#    - name: Ensure SSL certificate is valide
+#    
+#    - name: Ensure cluster AOS version is compatible
+#
+#    - name: Ensure Prism Central version is compatible
+#
+#    - name: Ensure cluster has enough storage capacity
+#
+#    - name: Ensure DNS entries are set
