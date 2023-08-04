@@ -42,69 +42,81 @@
         url: "https://{{ nutanix_central_host }}:9440"
         validate_certs: true
 
-    # As for now (summer 2023), https://github.com/nutanix/nutanix.ansible doesn't allow accessing user's permissions
-    # Furthermore, the Prism Central v3 API doesn't allow too, or at least not easily
-    # That is, to ensure the provided account has enough permissions, this task runs CRUD operations on mock VMs, categories and images
-    # The OCP IPI installation needs to perform these actions
-    # TODO find a better solution
     - name: Ensure account has enough permissions
       block:
-        - name: "Ensure that the account can perform CRUD operations on VMs in the cluster {{ nutanix_cluster }}"
-          block:
-            - name: "Ensure that the account can create a VM in the cluster {{ nutanix_cluster }}"
-              ntnx_vms:
-                state: present
-                name: tmp_ansible_check_ipi_prerequisites
-                desc: Temporary VM created by a Ansible playbook to check if OCP IPI installation prerequisites are fulfilled
-                cluster:
-                  name: "{{ nutanix_cluster }}"
-                vcpus: 1
-                cores_per_vcpu: 1
-                memory_gb: 1
-              register: created_vm
+        - name: Ensure account has enough permissions - get user informations
+          uri:
+            url: "https://{{ nutanix_central_host }}:9440/api/nutanix/v3/users/me"
+            return_content: true
+            force_basic_auth: true
+            user: "{{ nutanix_username }}"
+            password: "{{ nutanix_password }}"
+          register: user_informations
 
-            - name: "Ensure that the account can list its VM in the cluster {{ nutanix_cluster }}"
-              ntnx_vms_info:
-                filter:
-                  vm_name: tmp_ansible_check_ipi_prerequisites
-                kind: vm
-              register: vm_info
-              failed_when: vm_info.response.metadata.total_matches != 1
+        - name: Ensure account has enough permissions - get user ACPs
+          uri:
+            url: "https://{{ nutanix_central_host }}:9440/api/nutanix/v3/access_control_policies/{{ item.uuid }}"
+            return_content: true
+            force_basic_auth: true
+            user: "{{ nutanix_username }}"
+            password: "{{ nutanix_password }}"
+          loop: "{{ user_informations.json.status.resources.access_control_policy_reference_list }}"
+          register: user_acps
 
-            - name: "Ensure that the account can update its VM in the cluster {{ nutanix_cluster }}"
-              ntnx_vms:
-                vm_uuid: "{{created_vm.vm_uuid}}"
-                memory_gb: 2
+        - name: Ensure account has enough permissions - get user roles
+          uri:
+            url: "https://{{ nutanix_central_host }}:9440/api/nutanix/v3/roles/{{ item.json.status.resources.role_reference.uuid }}"
+            return_content: true
+            force_basic_auth: true
+            user: "{{ nutanix_username }}"
+            password: "{{ nutanix_password }}"
+          loop: "{{ user_acps.results }}"
+          loop_control:
+            label: "{{ item.json.status.resources.role_reference }}"
+          register: user_roles
 
-            - name: "Ensure that the account can delete its VM in the cluster {{ nutanix_cluster }}"
-              ntnx_vms:
-                state: absent
-                vm_uuid: "{{created_vm.vm_uuid}}"
+        - name: Ensure account has enough permissions - fail if not satisfied
+          fail:
+            msg: The provided account has not meet the permissions requirement. It must have access to CRUD operations on VMs, categories and images.
+          when: >
+           not(
+             'View_Virtual_Machine' in user_permissions and
+             'Create_Virtual_Machine' in user_permissions and
+             'Update_Virtual_Machine' in user_permissions and
+             'Delete_Virtual_Machine' in user_permissions and
 
-        - name: "Ensure that the account can perform CRUD operations on categories in the cluster {{ nutanix_element_host }}"
-          block:
-            - name: "Ensure that the account can create a category in the cluster {{ nutanix_cluster }}"
-              ntnx_categories:
-                state: present
-                name: tmp_ansible_check_ipi_prerequisites
-                desc: Temporary category created by a Ansible playbook to check if OCP IPI installation prerequisites are fulfilled
+             'View_Image' in user_permissions and
+             'Create_Image' in user_permissions and
+             'Update_Image' in user_permissions and
+             'Delete_Image' in user_permissions and
 
-            - name: "Ensure that the account can update its categories in the cluster {{ nutanix_cluster }}"
-              ntnx_categories:
-                name: tmp_ansible_check_ipi_prerequisites
-                values:
-                  - "temp-val"
+             'View_Category_Mapping' in user_permissions and
+             'Create_Category_Mapping' in user_permissions and
+             'Update_Category_Mapping' in user_permissions and
+             'Delete_Category_Mapping' in user_permissions and
 
-            - name: "Ensure that the account can delete its categories in the cluster {{ nutanix_cluster }}"
-              ntnx_categories:
-                state: absent
-                name: tmp_ansible_check_ipi_prerequisites
-
-#        - name: "Ensure that the account can perform CRUD operations on images in the cluster {{ nutanix_element_host }}"
+             'View_Value_Category' in user_permissions and
+             'Create_Or_Update_Value_Category' in user_permissions and
+             'Delete_Value_Category' in user_permissions
+           )
+          vars:
+            user_permissions: "{{ user_roles.results|map(attribute='json.status.resources.permission_reference_list')|list|first|unique|map(attribute='name')}}"
 
 
 #    - name: Ensure cluster AOS version is compatible
+#    - name: test getting all clusters
+#      ntnx_clusters_info:
+#      register: clusters
 #
+#    - name: test getting particular cluster using uuid
+#      ntnx_clusters_info:
+#        cluster_uuid: '{{ clusters.response.entities[0].metadata.uuid }}'
+#      register: result
+#
+#    - name: Print cluster list
+#      ansible.builtin.debug:
+#        var: result
+#      when: result is defined
 #    - name: Ensure Prism Central version is compatible
 #
 #    - name: Ensure cluster has enough storage capacity
