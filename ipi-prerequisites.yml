@@ -103,22 +103,23 @@
             user_permissions: "{{ user_roles.results|map(attribute='json.status.resources.permission_reference_list')|list|first|unique|map(attribute='name')}}"
 
 
-#    - name: Ensure cluster AOS version is compatible
-#    - name: test getting all clusters
-#      ntnx_clusters_info:
-#      register: clusters
-#
-#    - name: test getting particular cluster using uuid
-#      ntnx_clusters_info:
-#        cluster_uuid: '{{ clusters.response.entities[0].metadata.uuid }}'
-#      register: result
-#
-#    - name: Print cluster list
-#      ansible.builtin.debug:
-#        var: result
-#      when: result is defined
 #    - name: Ensure Prism Central version is compatible
-#
+
+    - name: Ensure {{ nutanix_cluster }} AOS version is compatible
+      block:
+        - name: Ensure {{ nutanix_cluster }} AOS version is compatible - get all clusters
+          ntnx_clusters_info:
+          register: clusters
+
+        - name: Ensure {{ nutanix_cluster }} AOS version is compatible - retrieve {{ nutanix_cluster }} from all clusters
+          set_fact:
+            cluster: "{{clusters.response.entities|map(attribute='status')|selectattr('name', 'equalto', nutanix_cluster)|first}}"
+
+        - name: Ensure {{ nutanix_cluster }} AOS version is compatible - fail if not satisfied
+          fail:
+            msg: The cluster {{ nutanix_cluster }} version is not compatible. Please update it to version 6.5.1+
+          when: cluster.resources.config.software_map.NOS.version is version('6.5.1', '<')
+
 #    - name: Ensure cluster has enough storage capacity
 #
 #    - name: Ensure DNS entries are set
