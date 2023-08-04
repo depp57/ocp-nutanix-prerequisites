@@ -103,7 +103,11 @@
             user_permissions: "{{ user_roles.results|map(attribute='json.status.resources.permission_reference_list')|list|first|unique|map(attribute='name')}}"
 
 
-#    - name: Ensure Prism Central version is compatible
+    - name: Ensure Prism Central version is compatible
+      debug:
+        msg: >
+          As of summer 2023, there is no automatic way to retrieve the Prism Central version.
+          Please check that the Prism Central meets the minimum version 2022.4.
 
     - name: Ensure {{ nutanix_cluster }} AOS version is compatible
       block:
