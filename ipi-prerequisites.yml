@@ -122,4 +122,11 @@
 
 #    - name: Ensure cluster has enough storage capacity
 #
-#    - name: Ensure DNS entries are set
+    - name: Ensure the presence of DNS records
+      command: dig +short example.com
+      register: dns_record
+      failed_when: dns_record.stdout == ''
+      changed_when: false
+      loop:
+        - api.{{ ocp_cluster_name }}.{{ ocp_base_domain }}
+        - test.apps.{{ ocp_cluster_name }}.{{ ocp_base_domain }}
